@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "statusCode": 200,
+  "ticket": {
+    "id": "TKT-1786870800000-ABCDE",
+    "requester": {
+      "name": "Demo User",
+      "email": "demo@example.com"
+    },
+    "subject": "Production server outage",
+    "description": "The production API is down and unavailable for all users.",
+    "category": "Technical",
+    "priority": "High",
+    "priorityScore": 80,
+    "slaHours": 4,
+    "dueAt": "2026-08-16T13:00:00.000Z",
+    "status": "New",
+    "source": "n8n-webhook",
+    "createdAt": "2026-08-16T09:00:00.000Z"
+  }
+}
