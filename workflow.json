@@ -1,0 +1,71 @@
+{
+  "name": "IT Support Ticket Triage Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-ticket-triage",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6c6635bc-3409-4899-86af-1906c44dff9b",
+      "name": "Receive Support Ticket",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "a8ab47bf-e861-4eb8-88de-039851b25160"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json.body ?? $json;\nconst now = new Date();\nconst requiredFields = ['name', 'email', 'subject', 'description'];\nconst missingFields = requiredFields.filter((field) => {\n  const value = payload?.[field];\n  return typeof value !== 'string' || value.trim() === '';\n});\n\nif (missingFields.length > 0) {\n  return [{ json: {\n    ok: false,\n    statusCode: 400,\n    error: 'Validation failed',\n    missingFields,\n    timestamp: now.toISOString(),\n  } }];\n}\n\nconst rules = [\n  { category: 'Security', priority: 'Critical', priorityScore: 100, slaHours: 1, keywords: ['security', 'hacked', 'breach', 'unauthorized', 'malware', 'phishing', 'data leak'] },\n  { category: 'Technical', priority: 'High', priorityScore: 80, slaHours: 4, keywords: ['down', 'outage', 'unavailable', 'server error', 'cannot access', '500 error'] },\n  { category: 'Account Access', priority: 'High', priorityScore: 70, slaHours: 4, keywords: ['login', 'password', 'sign in', 'locked', 'authentication'] },\n  { category: 'Billing', priority: 'Medium', priorityScore: 50, slaHours: 8, keywords: ['payment', 'billing', 'invoice', 'refund', 'charge'] },\n];\nconst defaultRule = { category: 'General Support', priority: 'Normal', priorityScore: 30, slaHours: 24 };\nconst searchableText = `${payload.subject} ${payload.description}`.toLowerCase();\nconst match = rules.find((rule) => rule.keywords.some((keyword) => searchableText.includes(keyword))) ?? defaultRule;\nconst dueAt = new Date(now.getTime() + match.slaHours * 60 * 60 * 1000);\nconst idSuffix = Math.random().toString(36).slice(2, 7).toUpperCase();\n\nreturn [{ json: {\n  ok: true,\n  statusCode: 200,\n  ticket: {\n    id: `TKT-${now.getTime()}-${idSuffix}`,\n    requester: {\n      name: payload.name.trim(),\n      email: payload.email.trim().toLowerCase(),\n    },\n    subject: payload.subject.trim(),\n    description: payload.description.trim(),\n    category: match.category,\n    priority: match.priority,\n    priorityScore: match.priorityScore,\n    slaHours: match.slaHours,\n    dueAt: dueAt.toISOString(),\n    status: 'New',\n    source: 'n8n-webhook',\n    createdAt: now.toISOString(),\n  },\n} }];"
+      },
+      "id": "b431199b-952b-4c8e-98f5-4a214c9a1d0c",
+      "name": "Validate & Triage Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "887e5e72-cc80-4b8c-b17b-dc115a6c5e76",
+      "name": "Return Triage Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [560, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Support Ticket": {
+      "main": [[
+        {
+          "node": "Validate & Triage Ticket",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Validate & Triage Ticket": {
+      "main": [[
+        {
+          "node": "Return Triage Result",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "693d0b76-64d4-42f4-9795-500bcf2da3cb",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
